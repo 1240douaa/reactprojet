@@ -2,10 +2,62 @@ import React, { useState, useEffect } from 'react';
 import { Search, Plus, Trash2, Database, Users, BookOpen, UserCheck } from 'lucide-react';
 
 const GraphQLService = () => {
-  const [enrollments, setEnrollments] = useState([]);
-  const [students, setStudents] = useState([]);
-  const [courses, setCourses] = useState([]);
-  const [filteredEnrollments, setFilteredEnrollments] = useState([]);
+  // Données statiques
+  const staticStudents = [
+    { id: 1, first_name: 'Ahmed', last_name: 'Benali' },
+    { id: 2, first_name: 'Fatima', last_name: 'Zahra' },
+    { id: 3, first_name: 'Yacine', last_name: 'Kaddour' },
+    { id: 4, first_name: 'Amina', last_name: 'Messaoudi' },
+    { id: 5, first_name: 'Karim', last_name: 'Boudiaf' },
+    { id: 6, first_name: 'Samira', last_name: 'Hamdi' }
+  ];
+
+  const staticCourses = [
+    { id: 1, name: 'Machine Learning Avancé', instructor: 'Dr. Amina Khelifa' },
+    { id: 2, name: 'Big Data et Analytics', instructor: 'Prof. Karim Bencheikh' },
+    { id: 3, name: 'Deep Learning', instructor: 'Dr. Fatima Bouaziz' },
+    { id: 4, name: 'Traitement du Langage Naturel', instructor: 'Prof. Yacine Mansouri' },
+    { id: 5, name: 'Systèmes Distribués', instructor: 'Dr. Samira Hadj' },
+    { id: 6, name: 'Visualisation de Données', instructor: 'Prof. Ahmed Meziane' }
+  ];
+
+  const staticEnrollments = [
+    {
+      id: 1,
+      student: { id: 1, name: 'Ahmed Benali' },
+      course: { id: 1, title: 'Machine Learning Avancé' }
+    },
+    {
+      id: 2,
+      student: { id: 2, name: 'Fatima Zahra' },
+      course: { id: 2, title: 'Big Data et Analytics' }
+    },
+    {
+      id: 3,
+      student: { id: 3, name: 'Yacine Kaddour' },
+      course: { id: 3, title: 'Deep Learning' }
+    },
+    {
+      id: 4,
+      student: { id: 1, name: 'Ahmed Benali' },
+      course: { id: 4, title: 'Traitement du Langage Naturel' }
+    },
+    {
+      id: 5,
+      student: { id: 4, name: 'Amina Messaoudi' },
+      course: { id: 1, title: 'Machine Learning Avancé' }
+    },
+    {
+      id: 6,
+      student: { id: 5, name: 'Karim Boudiaf' },
+      course: { id: 5, title: 'Systèmes Distribués' }
+    }
+  ];
+
+  const [enrollments, setEnrollments] = useState(staticEnrollments);
+  const [students, setStudents] = useState(staticStudents);
+  const [courses, setCourses] = useState(staticCourses);
+  const [filteredEnrollments, setFilteredEnrollments] = useState(staticEnrollments);
   const [searchTerm, setSearchTerm] = useState('');
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState('');
@@ -50,27 +102,42 @@ const GraphQLService = () => {
         })
       });
       const data = await response.json();
-      setEnrollments(data.data?.allStudentCourses || []);
-      setFilteredEnrollments(data.data?.allStudentCourses || []);
+      if (data.data?.allStudentCourses && data.data.allStudentCourses.length > 0) {
+        setEnrollments(data.data.allStudentCourses);
+        setFilteredEnrollments(data.data.allStudentCourses);
+      } else {
+        setEnrollments(staticEnrollments);
+        setFilteredEnrollments(staticEnrollments);
+      }
     } catch (error) {
       console.error('Erreur lors de la récupération des inscriptions:', error);
+      setEnrollments(staticEnrollments);
+      setFilteredEnrollments(staticEnrollments);
     }
     setLoading(false);
   };
 
   const fetchStudentsAndCourses = async () => {
     try {
-      // Fetch students
       const studentsResponse = await fetch('http://localhost:8090/gateway/students_service');
       const studentsData = await studentsResponse.json();
-      setStudents(studentsData);
+      if (studentsData && studentsData.length > 0) {
+        setStudents(studentsData);
+      } else {
+        setStudents(staticStudents);
+      }
 
-      // Fetch courses
       const coursesResponse = await fetch('http://localhost:8090/gateway/courses_service');
       const coursesData = await coursesResponse.json();
-      setCourses(coursesData);
+      if (coursesData && coursesData.length > 0) {
+        setCourses(coursesData);
+      } else {
+        setCourses(staticCourses);
+      }
     } catch (error) {
       console.error('Erreur lors de la récupération:', error);
+      setStudents(staticStudents);
+      setCourses(staticCourses);
     }
   };
 
@@ -97,6 +164,18 @@ const GraphQLService = () => {
       }
     } catch (error) {
       console.error('Erreur lors de l\'inscription:', error);
+      // Mode statique
+      const student = students.find(s => s.id === parseInt(selectedStudent));
+      const course = courses.find(c => c.id === parseInt(selectedCourse));
+      const newEnrollment = {
+        id: enrollments.length + 1,
+        student: { id: student.id, name: `${student.first_name} ${student.last_name}` },
+        course: { id: course.id, title: course.name }
+      };
+      setEnrollments([...enrollments, newEnrollment]);
+      setShowEnrollModal(false);
+      setSelectedStudent('');
+      setSelectedCourse('');
     }
   };
 
@@ -117,163 +196,144 @@ const GraphQLService = () => {
         }
       } catch (error) {
         console.error('Erreur lors de la suppression:', error);
+        setEnrollments(enrollments.filter(e => e.id !== id));
       }
     }
   };
 
-  const getStudentById = (studentId) => {
-    return students.find(s => s.id === studentId);
-  };
-
-  const getCourseById = (courseId) => {
-    return courses.find(c => c.id === courseId);
-  };
-
   return (
-    <div className="space-y-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       {/* Header with Image */}
-      <div className="relative rounded-3xl overflow-hidden shadow-xl">
+      <div style={{ position: 'relative', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
         <img 
           src="https://i.pinimg.com/1200x/21/10/8e/21108e7b2a6228d26182b7d5792f93d9.jpg"
           alt="GraphQL"
-          className="w-full h-64 object-cover"
+          style={{ width: '100%', height: '256px', objectFit: 'cover' }}
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-pink-900/90 to-rose-900/70 flex items-center">
-          <div className="max-w-7xl mx-auto px-8 w-full">
-            <h1 className="text-4xl font-bold text-white mb-2">Gestion des Inscriptions</h1>
-            <p className="text-pink-100 text-lg">Système GraphQL pour inscriptions étudiant-cours</p>
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(157, 23, 77, 0.9), rgba(225, 29, 72, 0.7))', display: 'flex', alignItems: 'center' }}>
+          <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 2rem', width: '100%' }}>
+            <h1 style={{ fontSize: '2.25rem', fontWeight: 'bold', color: 'white', margin: '0 0 0.5rem 0' }}>Gestion des Inscriptions</h1>
+            <p style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: '1.125rem', margin: 0 }}>Système GraphQL pour inscriptions étudiant-cours</p>
           </div>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl p-6 shadow-lg">
-          <div className="flex items-center justify-between">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
+        <div style={{ background: 'white', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <p className="text-gray-500 text-sm font-medium">Total Inscriptions</p>
-              <p className="text-3xl font-bold text-gray-800 mt-2">{enrollments.length}</p>
+              <p style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 500, margin: 0 }}>Total Inscriptions</p>
+              <p style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#1f2937', margin: '0.5rem 0 0 0' }}>{enrollments.length}</p>
             </div>
-            <div className="bg-gradient-to-br from-pink-500 to-pink-600 p-3 rounded-lg">
-              <Database className="w-6 h-6 text-white" />
+            <div style={{ background: 'linear-gradient(to bottom right, #ec4899, #db2777)', padding: '12px', borderRadius: '8px' }}>
+              <Database size={24} color="white" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-lg">
-          <div className="flex items-center justify-between">
+        <div style={{ background: 'white', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <p className="text-gray-500 text-sm font-medium">Étudiants Inscrits</p>
-              <p className="text-3xl font-bold text-gray-800 mt-2">{students.length}</p>
+              <p style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 500, margin: 0 }}>Étudiants Inscrits</p>
+              <p style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#1f2937', margin: '0.5rem 0 0 0' }}>{students.length}</p>
             </div>
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-3 rounded-lg">
-              <Users className="w-6 h-6 text-white" />
+            <div style={{ background: 'linear-gradient(to bottom right, #3b82f6, #2563eb)', padding: '12px', borderRadius: '8px' }}>
+              <Users size={24} color="white" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-lg">
-          <div className="flex items-center justify-between">
+        <div style={{ background: 'white', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <p className="text-gray-500 text-sm font-medium">Cours Disponibles</p>
-              <p className="text-3xl font-bold text-gray-800 mt-2">{courses.length}</p>
+              <p style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 500, margin: 0 }}>Cours Disponibles</p>
+              <p style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#1f2937', margin: '0.5rem 0 0 0' }}>{courses.length}</p>
             </div>
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-3 rounded-lg">
-              <BookOpen className="w-6 h-6 text-white" />
+            <div style={{ background: 'linear-gradient(to bottom right, #a855f7, #9333ea)', padding: '12px', borderRadius: '8px' }}>
+              <BookOpen size={24} color="white" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Action Bar */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+      <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', padding: '1.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ position: 'relative', flex: 1, maxWidth: '500px' }}>
+            <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} size={20} />
             <input
               type="text"
               placeholder="Rechercher par étudiant ou cours..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:border-pink-500 focus:outline-none"
+              style={{ width: '100%', padding: '12px 16px 12px 48px', border: '2px solid #e5e7eb', borderRadius: '8px', fontSize: '1rem' }}
             />
           </div>
           <button
             onClick={() => setShowEnrollModal(true)}
-            className="bg-gradient-to-r from-pink-600 to-pink-700 text-white px-6 py-3 rounded-lg font-semibold hover:from-pink-700 hover:to-pink-800 transition-all flex items-center space-x-2 shadow-lg"
+            style={{ background: 'linear-gradient(to right, #ec4899, #db2777)', color: 'white', padding: '12px 24px', borderRadius: '8px', border: 'none', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
           >
-            <Plus className="w-5 h-5" />
+            <Plus size={20} />
             <span>Nouvelle Inscription</span>
           </button>
         </div>
       </div>
 
-      {/* Enrollments List */}
+      {/* Enrollments Table */}
       {loading ? (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-pink-500 border-t-transparent"></div>
+        <div style={{ textAlign: 'center', padding: '3rem 0' }}>
+          <div style={{ border: '4px solid #f3f4f6', borderTop: '4px solid #ec4899', borderRadius: '50%', width: '48px', height: '48px', animation: 'spin 1s linear infinite', margin: '0 auto' }}></div>
         </div>
       ) : filteredEnrollments.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-          <UserCheck className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500 text-lg">Aucune inscription trouvée</p>
+        <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', padding: '3rem', textAlign: 'center' }}>
+          <UserCheck size={64} color="#d1d5db" />
+          <p style={{ color: '#6b7280', fontSize: '1.125rem', marginTop: '1rem' }}>Aucune inscription trouvée</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gradient-to-r from-pink-600 to-rose-600 text-white">
+        <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead style={{ background: 'linear-gradient(to right, #ec4899, #db2777)' }}>
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold">ID</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold">Étudiant</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold">ID Étudiant</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold">Cours</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold">ID Cours</th>
-                  <th className="px-6 py-4 text-center text-sm font-semibold">Actions</th>
+                  <th style={{ padding: '1rem 1.5rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: 600, color: 'white' }}>ID</th>
+                  <th style={{ padding: '1rem 1.5rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: 600, color: 'white' }}>Étudiant</th>
+                  <th style={{ padding: '1rem 1.5rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: 600, color: 'white' }}>ID Étudiant</th>
+                  <th style={{ padding: '1rem 1.5rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: 600, color: 'white' }}>Cours</th>
+                  <th style={{ padding: '1rem 1.5rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: 600, color: 'white' }}>ID Cours</th>
+                  <th style={{ padding: '1rem 1.5rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: 600, color: 'white' }}>Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody>
                 {filteredEnrollments.map((enrollment) => (
-                  <tr key={enrollment.id} className="hover:bg-pink-50 transition-colors">
-                    <td className="px-6 py-4 text-gray-800 font-medium">
-                      {enrollment.id}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="bg-gradient-to-br from-blue-500 to-blue-600 w-10 h-10 rounded-full flex items-center justify-center text-white font-bold">
+                  <tr key={enrollment.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                    <td style={{ padding: '1rem 1.5rem', color: '#1f2937', fontWeight: 500 }}>{enrollment.id}</td>
+                    <td style={{ padding: '1rem 1.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ background: 'linear-gradient(to bottom right, #3b82f6, #2563eb)', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>
                           {enrollment.student?.name?.charAt(0) || '?'}
                         </div>
-                        <span className="font-semibold text-gray-800">
-                          {enrollment.student?.name || 'N/A'}
-                        </span>
+                        <span style={{ fontWeight: 600, color: '#1f2937' }}>{enrollment.student?.name || 'N/A'}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-gray-600">
-                      {enrollment.student?.id || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-2 rounded-lg">
-                          <BookOpen className="w-5 h-5 text-white" />
+                    <td style={{ padding: '1rem 1.5rem', color: '#6b7280' }}>{enrollment.student?.id || 'N/A'}</td>
+                    <td style={{ padding: '1rem 1.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ background: 'linear-gradient(to bottom right, #a855f7, #9333ea)', padding: '8px', borderRadius: '8px' }}>
+                          <BookOpen size={20} color="white" />
                         </div>
-                        <span className="font-semibold text-gray-800">
-                          {enrollment.course?.title || 'N/A'}
-                        </span>
+                        <span style={{ fontWeight: 600, color: '#1f2937' }}>{enrollment.course?.title || 'N/A'}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-gray-600">
-                      {enrollment.course?.id || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex justify-center">
-                        <button
-                          onClick={() => handleRemoveEnrollment(enrollment.id)}
-                          className="bg-red-50 text-red-600 px-4 py-2 rounded-lg font-semibold hover:bg-red-100 transition-all flex items-center space-x-2"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          <span>Annuler</span>
-                        </button>
-                      </div>
+                    <td style={{ padding: '1rem 1.5rem', color: '#6b7280' }}>{enrollment.course?.id || 'N/A'}</td>
+                    <td style={{ padding: '1rem 1.5rem', textAlign: 'center' }}>
+                      <button
+                        onClick={() => handleRemoveEnrollment(enrollment.id)}
+                        style={{ background: '#fef2f2', color: '#dc2626', padding: '8px 16px', borderRadius: '8px', border: 'none', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                      >
+                        <Trash2 size={16} />
+                        <span>Annuler</span>
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -285,19 +345,19 @@ const GraphQLService = () => {
 
       {/* Enroll Modal */}
       {showEnrollModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
-            <h3 className="text-2xl font-bold text-gray-800 mb-6">Nouvelle Inscription</h3>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          <div style={{ background: 'white', borderRadius: '16px', padding: '2rem', maxWidth: '500px', width: '90%', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '1.5rem' }}>Nouvelle Inscription</h3>
             
-            <div className="space-y-4 mb-6">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '0.5rem' }}>
                   Sélectionner un Étudiant
                 </label>
                 <select
                   value={selectedStudent}
                   onChange={(e) => setSelectedStudent(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-pink-500 focus:outline-none"
+                  style={{ width: '100%', padding: '12px 16px', border: '2px solid #e5e7eb', borderRadius: '8px', fontSize: '1rem' }}
                 >
                   <option value="">-- Choisir un étudiant --</option>
                   {students.map((student) => (
@@ -309,13 +369,13 @@ const GraphQLService = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '0.5rem' }}>
                   Sélectionner un Cours
                 </label>
                 <select
                   value={selectedCourse}
                   onChange={(e) => setSelectedCourse(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-pink-500 focus:outline-none"
+                  style={{ width: '100%', padding: '12px 16px', border: '2px solid #e5e7eb', borderRadius: '8px', fontSize: '1rem' }}
                 >
                   <option value="">-- Choisir un cours --</option>
                   {courses.map((course) => (
@@ -327,11 +387,11 @@ const GraphQLService = () => {
               </div>
             </div>
 
-            <div className="flex space-x-3">
+            <div style={{ display: 'flex', gap: '12px' }}>
               <button
                 onClick={handleEnroll}
                 disabled={!selectedStudent || !selectedCourse}
-                className="flex-1 bg-gradient-to-r from-pink-600 to-pink-700 text-white px-6 py-3 rounded-lg font-semibold hover:from-pink-700 hover:to-pink-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ flex: 1, background: 'linear-gradient(to right, #ec4899, #db2777)', color: 'white', padding: '12px 24px', borderRadius: '8px', border: 'none', fontWeight: 600, cursor: 'pointer', opacity: (!selectedStudent || !selectedCourse) ? 0.5 : 1 }}
               >
                 Inscrire
               </button>
@@ -341,7 +401,7 @@ const GraphQLService = () => {
                   setSelectedStudent('');
                   setSelectedCourse('');
                 }}
-                className="flex-1 bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-all"
+                style={{ flex: 1, background: '#e5e7eb', color: '#374151', padding: '12px 24px', borderRadius: '8px', border: 'none', fontWeight: 600, cursor: 'pointer' }}
               >
                 Annuler
               </button>
@@ -349,26 +409,6 @@ const GraphQLService = () => {
           </div>
         </div>
       )}
-
-      {/* GraphQL Info */}
-      <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-xl p-8 border-2 border-pink-100">
-        <div className="flex items-center space-x-3 mb-4">
-          <Database className="w-8 h-8 text-pink-600" />
-          <h3 className="text-2xl font-bold text-gray-800">Avantages GraphQL</h3>
-        </div>
-        <div className="grid md:grid-cols-2 gap-4">
-          <ul className="space-y-2 text-gray-600">
-            <li>✓ Requêtes optimisées multi-services</li>
-            <li>✓ Récupération de données précises</li>
-            <li>✓ Performance améliorée</li>
-          </ul>
-          <ul className="space-y-2 text-gray-600">
-            <li>✓ Réduction des appels réseau</li>
-            <li>✓ Flexibilité des requêtes</li>
-            <li>✓ Typage fort des données</li>
-          </ul>
-        </div>
-      </div>
     </div>
   );
 };

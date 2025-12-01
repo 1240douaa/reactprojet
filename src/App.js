@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Menu, X, Home, Users, BookOpen, MessageSquare, Database } from 'lucide-react';
+import './App.css';
 import HomePage from './components/HomePage';
 import StudentService from './components/StudentService';
 import CourseService from './components/CourseService';
@@ -30,38 +31,34 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* AppBar */}
-      <nav className="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 shadow-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+    <div className="app">
+      {/* Navbar */}
+      <nav className="navbar">
+        <div className="navbar-container">
+          <div className="navbar-content">
             {/* Logo */}
-            <div className="flex items-center space-x-3">
-              <div className="bg-white p-2 rounded-lg">
-                <BookOpen className="w-6 h-6 text-blue-900" />
+            <div className="navbar-logo">
+              <div className="logo-icon">
+                <BookOpen size={24} />
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-white">Campus Manager</h1>
-                <p className="text-xs text-blue-200">NTIC Faculty - Constantine 2</p>
+              <div className="logo-text">
+                <h1>Campus Manager</h1>
+                <p>NTIC Faculty - Constantine 2</p>
               </div>
             </div>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex space-x-1">
+            <div className="nav-desktop">
               {navigation.map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
                     key={item.id}
                     onClick={() => setCurrentPage(item.id)}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
-                      currentPage === item.id
-                        ? 'bg-white text-blue-900 shadow-lg'
-                        : 'text-white hover:bg-blue-700'
-                    }`}
+                    className={`nav-button ${currentPage === item.id ? 'active' : ''}`}
                   >
-                    <Icon className="w-5 h-5" />
-                    <span className="font-medium">{item.name}</span>
+                    <Icon size={20} />
+                    <span>{item.name}</span>
                   </button>
                 );
               })}
@@ -70,54 +67,46 @@ const App = () => {
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg text-white hover:bg-blue-700"
+              className="mobile-menu-btn"
             >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
         </div>
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-blue-800 border-t border-blue-700">
-            <div className="px-2 pt-2 pb-3 space-y-1">
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      setCurrentPage(item.id);
-                      setMobileMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg transition-all ${
-                      currentPage === item.id
-                        ? 'bg-white text-blue-900'
-                        : 'text-white hover:bg-blue-700'
-                    }`}
-                  >
-                    <Icon className="w-5 h-5" />
-                    <span className="font-medium">{item.name}</span>
-                  </button>
-                );
-              })}
-            </div>
+          <div className="nav-mobile">
+            {navigation.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setCurrentPage(item.id);
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`nav-mobile-button ${currentPage === item.id ? 'active' : ''}`}
+                >
+                  <Icon size={20} />
+                  <span>{item.name}</span>
+                </button>
+              );
+            })}
           </div>
         )}
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="main-content">
         {renderPage()}
       </main>
 
       {/* Footer */}
-      <footer className="bg-gray-800 text-white mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center">
-            <p className="text-gray-300">© 2025 Abdelhamid Mehri University - Constantine 2</p>
-            <p className="text-sm text-gray-400 mt-2">Master 1 - Data Science and Intelligent Systems</p>
-          </div>
+      <footer className="footer">
+        <div className="footer-container">
+          <p>© 2025 Abdelhamid Mehri University - Constantine 2</p>
+          <p className="footer-subtitle">Master 1 - Data Science and Intelligent Systems</p>
         </div>
       </footer>
     </div>

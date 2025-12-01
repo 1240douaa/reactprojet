@@ -1,5 +1,6 @@
 import React from 'react';
 import { Users, BookOpen, MessageSquare, Database, TrendingUp, Award } from 'lucide-react';
+import './HomePage.css';
 
 const HomePage = () => {
   const features = [
@@ -37,27 +38,27 @@ const HomePage = () => {
   ];
 
   return (
-    <div className="space-y-12">
+    <div className="homepage">
       {/* Hero Section */}
-      <div className="relative rounded-3xl overflow-hidden shadow-2xl">
+      <div className="hero-section">
         <img 
           src="https://www.collegetransitions.com/wp-content/uploads/2024/12/college-student-life.jpg"
           alt="Campus Student Life"
-          className="w-full h-96 object-cover"
+          className="hero-image"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/90 to-indigo-900/70 flex items-center">
-          <div className="max-w-4xl mx-auto px-8 text-white">
-            <h1 className="text-5xl font-bold mb-4">
+        <div className="hero-overlay">
+          <div className="hero-content">
+            <h1 className="hero-title">
               Système de Gestion Campus
             </h1>
-            <p className="text-xl text-blue-100 mb-6">
+            <p className="hero-description">
               Plateforme moderne et intelligente pour la gestion complète des étudiants, cours et inscriptions
             </p>
-            <div className="flex space-x-4">
-              <button className="bg-white text-blue-900 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-all shadow-lg">
+            <div className="hero-actions">
+              <button className="btn-hero-primary">
                 Commencer
               </button>
-              <button className="border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-900 transition-all">
+              <button className="btn-hero-secondary">
                 En savoir plus
               </button>
             </div>
@@ -66,18 +67,18 @@ const HomePage = () => {
       </div>
 
       {/* Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="stats-grid">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <div key={index} className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all">
-              <div className="flex items-center justify-between">
+            <div key={index} className="stat-card">
+              <div className="stat-content">
                 <div>
-                  <p className="text-gray-500 text-sm font-medium">{stat.label}</p>
-                  <p className="text-3xl font-bold text-gray-800 mt-2">{stat.value}</p>
+                  <p className="stat-label">{stat.label}</p>
+                  <p className="stat-value">{stat.value}</p>
                 </div>
-                <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-3 rounded-lg">
-                  <Icon className="w-6 h-6 text-white" />
+                <div className="stat-icon">
+                  <Icon size={24} />
                 </div>
               </div>
             </div>
@@ -86,31 +87,28 @@ const HomePage = () => {
       </div>
 
       {/* Features Section */}
-      <div>
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-gray-800 mb-4">
+      <div className="features-section">
+        <div className="section-header">
+          <h2 className="section-title">
             Fonctionnalités Principales
           </h2>
-          <p className="text-xl text-gray-600">
+          <p className="section-description">
             Des outils puissants pour une gestion efficace de votre campus
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="features-grid">
           {features.map((feature, index) => {
             const Icon = feature.icon;
             return (
-              <div 
-                key={index} 
-                className="bg-white rounded-xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1"
-              >
-                <div className={`inline-flex p-4 rounded-xl bg-gradient-to-br ${feature.color} mb-4`}>
-                  <Icon className="w-8 h-8 text-white" />
+              <div key={index} className="feature-card">
+                <div className={`feature-icon ${feature.color}`}>
+                  <Icon size={32} />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-800 mb-3">
+                <h3 className="feature-title">
                   {feature.title}
                 </h3>
-                <p className="text-gray-600 leading-relaxed">
+                <p className="feature-description">
                   {feature.description}
                 </p>
               </div>
@@ -120,58 +118,46 @@ const HomePage = () => {
       </div>
 
       {/* Architecture Section */}
-      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-3xl p-12">
-        <div className="text-center mb-8">
-          <h2 className="text-4xl font-bold text-gray-800 mb-4">
+      <div className="architecture-section">
+        <div className="section-header">
+          <h2 className="section-title">
             Architecture Microservices
           </h2>
-          <p className="text-xl text-gray-600">
+          <p className="section-description">
             Une architecture moderne, scalable et performante
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-xl p-6 shadow-md">
-            <div className="text-center">
-              <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-blue-600">1</span>
-              </div>
-              <h4 className="font-bold text-gray-800 mb-2">Spring Boot</h4>
-              <p className="text-gray-600 text-sm">Service Étudiants avec REST API</p>
-            </div>
+        <div className="architecture-grid">
+          <div className="architecture-card">
+            <div className="architecture-number blue">1</div>
+            <h4 className="architecture-title">Spring Boot</h4>
+            <p className="architecture-description">Service Étudiants avec REST API</p>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-md">
-            <div className="text-center">
-              <div className="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-purple-600">2</span>
-              </div>
-              <h4 className="font-bold text-gray-800 mb-2">Django</h4>
-              <p className="text-gray-600 text-sm">Services Cours & Chatbot IA</p>
-            </div>
+          <div className="architecture-card">
+            <div className="architecture-number purple">2</div>
+            <h4 className="architecture-title">Django</h4>
+            <p className="architecture-description">Services Cours & Chatbot IA</p>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-md">
-            <div className="text-center">
-              <div className="bg-pink-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-pink-600">3</span>
-              </div>
-              <h4 className="font-bold text-gray-800 mb-2">GraphQL</h4>
-              <p className="text-gray-600 text-sm">Requêtes optimisées multi-services</p>
-            </div>
+          <div className="architecture-card">
+            <div className="architecture-number pink">3</div>
+            <h4 className="architecture-title">GraphQL</h4>
+            <p className="architecture-description">Requêtes optimisées multi-services</p>
           </div>
         </div>
       </div>
 
       {/* CTA Section */}
-      <div className="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-3xl p-12 text-center text-white shadow-2xl">
-        <h2 className="text-4xl font-bold mb-4">
+      <div className="cta-section">
+        <h2 className="cta-title">
           Prêt à commencer ?
         </h2>
-        <p className="text-xl text-blue-100 mb-8">
+        <p className="cta-description">
           Utilisez le menu de navigation pour accéder aux différents services
         </p>
-        <button className="bg-white text-blue-900 px-8 py-4 rounded-lg font-bold text-lg hover:bg-blue-50 transition-all shadow-lg">
+        <button className="btn-cta">
           Explorer les Services
         </button>
       </div>
