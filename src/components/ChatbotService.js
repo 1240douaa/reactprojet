@@ -1,308 +1,491 @@
 import React, { useState } from 'react';
-import { MessageSquare, Languages, FileText, Send, Loader, RefreshCw } from 'lucide-react';
-import './ChatbotService.css';
+import { MessageSquare, Languages, FileText, Send, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
+import apiService from '../services/apiService';
 
 const ChatbotService = () => {
-  const [activeTab, setActiveTab] = useState('translate');
-  const [translateInput, setTranslateInput] = useState('');
-  const [translateOutput, setTranslateOutput] = useState('');
-  const [summarizeInput, setSummarizeInput] = useState('');
-  const [summarizeOutput, setSummarizeOutput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [sourceLang, setSourceLang] = useState('fr');
-  const [targetLang, setTargetLang] = useState('en');
+  // États pour la traduction
+  const [textToTranslate, setTextToTranslate] = useState('');
+  const [translation, setTranslation] = useState('');
+  const [translating, setTranslating] = useState(false);
+  const [translateError, setTranslateError] = useState(null);
 
-  const API_URL = 'http://localhost:8090/gateway/ai_service';
+  // États pour le résumé
+  const [textToSummarize, setTextToSummarize] = useState('');
+  const [summary, setSummary] = useState('');
+  const [summaryStats, setSummaryStats] = useState(null);
+  const [summarizing, setSummarizing] = useState(false);
+  const [summarizeError, setSummarizeError] = useState(null);
+  const [ratio, setRatio] = useState(0.3);
 
+  // ==========================================
+  // TRADUCTION
+  // ==========================================
   const handleTranslate = async () => {
-    if (!translateInput.trim()) return;
-    
-    setLoading(true);
-    try {
-      const response = await fetch(`${API_URL}/translate/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: translateInput,
-          source_lang: sourceLang,
-          target_lang: targetLang
-        })
-      });
-      const data = await response.json();
-      setTranslateOutput(data.translation || data.translated_text || 'Traduction disponible');
-    } catch (error) {
-      console.error('Erreur lors de la traduction:', error);
-      setTranslateOutput('⚠️ Service de traduction temporairement indisponible. Veuillez réessayer ultérieurement.');
+    if (!textToTranslate.trim()) {
+      setTranslateError('Veuillez entrer du texte à traduire');
+      return;
     }
-    setLoading(false);
-  };
 
-  const handleSummarize = async () => {
-    if (!summarizeInput.trim()) return;
-    
-    setLoading(true);
+    setTranslating(true);
+    setTranslateError(null);
+    setTranslation('');
+
     try {
-      const response = await fetch(`${API_URL}/summarize/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: summarizeInput
-        })
-      });
-      const data = await response.json();
-      setSummarizeOutput(data.summary || 'Résumé généré avec succès');
-    } catch (error) {
-      console.error('Erreur lors du résumé:', error);
-      setSummarizeOutput('⚠️ Service de résumé temporairement indisponible. Veuillez réessayer ultérieurement.');
+      console.log('🌐 [ChatbotService] Sending translation request:', textToTranslate);
+      const result = await apiService.translateText(textToTranslate);
+      console.log('✅ [ChatbotService] Translation result:', result);
+      
+      // Vérifier si la réponse contient translated_text
+      if (result && result.translated_text) {
+        setTranslation(result.translated_text);
+      } else if (result && result.error) {
+        // Si le backend retourne une erreur
+        throw new Error(result.detail || result.error);
+      } else {
+        // Format de réponse inattendu
+        console.error('Unexpected response format:', result);
+        throw new Error('Format de réponse invalide du serveur');
+      }
+    } catch (err) {
+      console.error('❌ [ChatbotService] Translation error:', err);
+      
+      // Améliorer le message d'erreur
+      let errorMessage = 'Erreur lors de la traduction';
+      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        errorMessage = 'Impossible de contacter le serveur. Vérifiez que le gateway est démarré sur le port 8090.';
+      } else if (err.message.includes('timeout')) {
+        errorMessage = 'Le serveur met trop de temps à répondre. Réessayez dans quelques instants.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setTranslateError(errorMessage);
+    } finally {
+      setTranslating(false);
     }
-    setLoading(false);
   };
 
   const clearTranslation = () => {
-    setTranslateInput('');
-    setTranslateOutput('');
+    setTextToTranslate('');
+    setTranslation('');
+    setTranslateError(null);
+  };
+
+  // ==========================================
+  // RÉSUMÉ
+  // ==========================================
+  const handleSummarize = async () => {
+    if (!textToSummarize.trim()) {
+      setSummarizeError('Veuillez entrer du texte à résumer');
+      return;
+    }
+
+    const words = textToSummarize.trim().split(/\s+/).length;
+    if (words < 10) {
+      setSummarizeError('Le texte doit contenir au moins 10 mots');
+      return;
+    }
+
+    setSummarizing(true);
+    setSummarizeError(null);
+    setSummary('');
+    setSummaryStats(null);
+
+    try {
+      console.log('📝 [ChatbotService] Sending summarization request:', { 
+        length: words, 
+        ratio 
+      });
+      
+      const result = await apiService.summarizeText(textToSummarize, ratio);
+      console.log('✅ [ChatbotService] Summarization result:', result);
+      
+      // Vérifier si la réponse contient summary
+      if (result && result.summary) {
+        setSummary(result.summary);
+        setSummaryStats({
+          original: result.original_length,
+          summary: result.summary_length,
+          compression: result.compression_ratio,
+          warning: result.warning
+        });
+      } else if (result && result.error) {
+        // Si le backend retourne une erreur
+        throw new Error(result.detail || result.error);
+      } else {
+        // Format de réponse inattendu
+        console.error('Unexpected response format:', result);
+        throw new Error('Format de réponse invalide du serveur');
+      }
+    } catch (err) {
+      console.error('❌ [ChatbotService] Summarization error:', err);
+      
+      // Améliorer le message d'erreur
+      let errorMessage = 'Erreur lors du résumé';
+      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        errorMessage = 'Impossible de contacter le serveur. Vérifiez que le gateway est démarré sur le port 8090.';
+      } else if (err.message.includes('timeout')) {
+        errorMessage = 'Le serveur met trop de temps à répondre. Réessayez dans quelques instants.';
+      } else if (err.message.includes('too short')) {
+        errorMessage = 'Le texte est trop court pour être résumé (minimum 10 mots)';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setSummarizeError(errorMessage);
+    } finally {
+      setSummarizing(false);
+    }
   };
 
   const clearSummary = () => {
-    setSummarizeInput('');
-    setSummarizeOutput('');
+    setTextToSummarize('');
+    setSummary('');
+    setSummaryStats(null);
+    setSummarizeError(null);
   };
 
   return (
-    <div className="chatbot-service">
-      {/* Header with Image */}
+    <div className="service-container">
+      {/* Header */}
       <div className="service-header">
-        <img 
-          src="https://i.pinimg.com/1200x/db/7c/19/db7c190693e054346e047d9a4480a838.jpg"
-          alt="AI Chatbot"
-          className="service-header-image"
-        />
-        <div className="service-header-overlay green">
-          <div className="service-header-content">
-            <h1 className="service-header-title">Assistant IA</h1>
-            <p className="service-header-description">Traduction et résumé de textes académiques</p>
+        <div className="service-title">
+          <MessageSquare size={32} className="service-icon" />
+          <div>
+            <h2>Assistant IA</h2>
+            <p>Traduction et résumé de texte alimentés par l'IA</p>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="tabs-container">
-        <button
-          onClick={() => setActiveTab('translate')}
-          className={`tab-button ${activeTab === 'translate' ? 'active green' : ''}`}
-        >
-          <Languages size={20} />
-          <span>Traduction</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('summarize')}
-          className={`tab-button ${activeTab === 'summarize' ? 'active green' : ''}`}
-        >
-          <FileText size={20} />
-          <span>Résumé</span>
-        </button>
-      </div>
-
-      {/* Translation Tab */}
-      {activeTab === 'translate' && (
-        <div className="service-card">
-          <div className="card-header green">
-            <div className="header-icon green">
-              <Languages size={24} />
-            </div>
-            <div className="header-text">
-              <h2 className="card-title">Traduction de Texte</h2>
-              <p className="card-subtitle">Traduisez vos textes académiques instantanément</p>
+      <div style={{ display: 'grid', gap: '2rem' }}>
+        {/* ==========================================
+            SECTION TRADUCTION
+        ========================================== */}
+        <section style={{ 
+          background: 'white', 
+          borderRadius: '12px', 
+          padding: '2rem',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+            <Languages size={28} style={{ color: '#2563eb' }} />
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.5rem', color: '#1e293b' }}>
+                Traduction (EN → FR)
+              </h3>
+              <p style={{ margin: '0.25rem 0 0 0', color: '#64748b', fontSize: '0.875rem' }}>
+                Traduisez du texte anglais vers le français
+              </p>
             </div>
           </div>
 
-          {/* Language Selection */}
-          <div className="language-selector">
-            <div className="language-select-wrapper">
-              <label className="select-label">Langue source</label>
-              <select
-                value={sourceLang}
-                onChange={(e) => setSourceLang(e.target.value)}
-                className="language-select green"
-              >
-                <option value="fr">🇫🇷 Français</option>
-                <option value="en">🇬🇧 Anglais</option>
-                <option value="ar">🇸🇦 Arabe</option>
-                <option value="es">🇪🇸 Espagnol</option>
-              </select>
-            </div>
-            
-            <div className="language-arrow">→</div>
-            
-            <div className="language-select-wrapper">
-              <label className="select-label">Langue cible</label>
-              <select
-                value={targetLang}
-                onChange={(e) => setTargetLang(e.target.value)}
-                className="language-select green"
-              >
-                <option value="en">🇬🇧 Anglais</option>
-                <option value="fr">🇫🇷 Français</option>
-                <option value="ar">🇸🇦 Arabe</option>
-                <option value="es">🇪🇸 Espagnol</option>
-              </select>
-            </div>
+          {/* Input */}
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: '#475569' }}>
+              Texte en anglais
+            </label>
+            <textarea
+              value={textToTranslate}
+              onChange={(e) => setTextToTranslate(e.target.value)}
+              placeholder="Enter English text here... (e.g., Hello, how are you today?)"
+              rows="4"
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                fontSize: '1rem',
+                border: '2px solid #e2e8f0',
+                borderRadius: '8px',
+                resize: 'vertical',
+                fontFamily: 'inherit'
+              }}
+            />
           </div>
 
-          <div className="text-areas-grid">
-            <div className="text-area-container">
-              <div className="text-area-header">
-                <label className="text-area-label">Texte Source</label>
-                <span className="character-count">{translateInput.length} caractères</span>
-              </div>
-              <textarea
-                value={translateInput}
-                onChange={(e) => setTranslateInput(e.target.value)}
-                placeholder="Entrez le texte à traduire..."
-                className="text-area"
-              />
-            </div>
-            
-            <div className="text-area-container">
-              <div className="text-area-header">
-                <label className="text-area-label">Traduction</label>
-                {translateOutput && (
-                  <span className="character-count">{translateOutput.length} caractères</span>
-                )}
-              </div>
-              <div className="output-area green">
-                {loading ? (
-                  <div className="loading-state">
-                    <Loader className="spinner green" size={32} />
-                    <p>Traduction en cours...</p>
-                  </div>
-                ) : translateOutput ? (
-                  <p className="output-text">{translateOutput}</p>
-                ) : (
-                  <p className="placeholder-text">La traduction apparaîtra ici...</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="action-buttons">
-            <button
+          {/* Boutons */}
+          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+            <button 
               onClick={handleTranslate}
-              disabled={loading || !translateInput.trim()}
-              className="btn-primary green"
+              disabled={translating || !textToTranslate.trim()}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.75rem 1.5rem',
+                background: translating ? '#94a3b8' : '#2563eb',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '1rem',
+                fontWeight: 500,
+                cursor: translating ? 'not-allowed' : 'pointer'
+              }}
             >
-              <Send size={20} />
-              <span>Traduire</span>
+              {translating ? <RefreshCw size={20} className="spinning" /> : <Send size={20} />}
+              {translating ? 'Traduction...' : 'Traduire'}
             </button>
-            <button
+            <button 
               onClick={clearTranslation}
-              disabled={!translateInput && !translateOutput}
-              className="btn-secondary"
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: 'white',
+                color: '#64748b',
+                border: '2px solid #e2e8f0',
+                borderRadius: '8px',
+                fontSize: '1rem',
+                fontWeight: 500,
+                cursor: 'pointer'
+              }}
             >
-              <RefreshCw size={20} />
-              <span>Effacer</span>
+              Effacer
             </button>
           </div>
-        </div>
-      )}
 
-      {/* Summarization Tab */}
-      {activeTab === 'summarize' && (
-        <div className="service-card">
-          <div className="card-header green">
-            <div className="header-icon green">
-              <FileText size={24} />
+          {/* Erreur */}
+          {translateError && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              padding: '1rem',
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '8px',
+              color: '#991b1b',
+              marginBottom: '1rem'
+            }}>
+              <AlertCircle size={20} />
+              <span>{translateError}</span>
             </div>
-            <div className="header-text">
-              <h2 className="card-title">Résumé de Texte</h2>
-              <p className="card-subtitle">Générez des résumés concis de vos documents</p>
+          )}
+
+          {/* Résultat */}
+          {translation && (
+            <div style={{
+              padding: '1.5rem',
+              background: '#f0f9ff',
+              border: '2px solid #bfdbfe',
+              borderRadius: '8px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                <CheckCircle size={20} style={{ color: '#1e40af' }} />
+                <strong style={{ color: '#1e40af' }}>Traduction en français :</strong>
+              </div>
+              <p style={{ 
+                margin: 0, 
+                fontSize: '1.125rem', 
+                lineHeight: '1.75',
+                color: '#1e293b'
+              }}>
+                {translation}
+              </p>
+            </div>
+          )}
+        </section>
+
+        {/* ==========================================
+            SECTION RÉSUMÉ
+        ========================================== */}
+        <section style={{ 
+          background: 'white', 
+          borderRadius: '12px', 
+          padding: '2rem',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+            <FileText size={28} style={{ color: '#10b981' }} />
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.5rem', color: '#1e293b' }}>
+                Résumé de texte
+              </h3>
+              <p style={{ margin: '0.25rem 0 0 0', color: '#64748b', fontSize: '0.875rem' }}>
+                Résumez automatiquement vos textes (minimum 10 mots)
+              </p>
             </div>
           </div>
 
-          <div className="text-areas-grid">
-            <div className="text-area-container">
-              <div className="text-area-header">
-                <label className="text-area-label">Texte à Résumer</label>
-                <span className="character-count">{summarizeInput.length} caractères</span>
-              </div>
-              <textarea
-                value={summarizeInput}
-                onChange={(e) => setSummarizeInput(e.target.value)}
-                placeholder="Entrez le texte à résumer... (minimum 100 caractères recommandé)"
-                className="text-area large"
-              />
-            </div>
-            
-            <div className="text-area-container">
-              <div className="text-area-header">
-                <label className="text-area-label">Résumé Généré</label>
-                {summarizeOutput && (
-                  <span className="character-count">{summarizeOutput.length} caractères</span>
-                )}
-              </div>
-              <div className="output-area green large">
-                {loading ? (
-                  <div className="loading-state">
-                    <Loader className="spinner green" size={32} />
-                    <p>Génération du résumé en cours...</p>
-                  </div>
-                ) : summarizeOutput ? (
-                  <p className="output-text">{summarizeOutput}</p>
-                ) : (
-                  <p className="placeholder-text">Le résumé apparaîtra ici...</p>
-                )}
-              </div>
+          {/* Input */}
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: '#475569' }}>
+              Texte à résumer
+            </label>
+            <textarea
+              value={textToSummarize}
+              onChange={(e) => setTextToSummarize(e.target.value)}
+              placeholder="Entrez votre texte ici (minimum 10 mots)..."
+              rows="6"
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                fontSize: '1rem',
+                border: '2px solid #e2e8f0',
+                borderRadius: '8px',
+                resize: 'vertical',
+                fontFamily: 'inherit'
+              }}
+            />
+            <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#64748b' }}>
+              Mots: {textToSummarize.trim().split(/\s+/).filter(w => w).length}
             </div>
           </div>
 
-          <div className="action-buttons">
-            <button
+          {/* Ratio */}
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, color: '#475569' }}>
+              Niveau de compression: {Math.round(ratio * 100)}%
+            </label>
+            <input
+              type="range"
+              min="0.1"
+              max="0.9"
+              step="0.1"
+              value={ratio}
+              onChange={(e) => setRatio(parseFloat(e.target.value))}
+              style={{ width: '100%' }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94a3b8' }}>
+              <span>Plus court</span>
+              <span>Plus long</span>
+            </div>
+          </div>
+
+          {/* Boutons */}
+          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+            <button 
               onClick={handleSummarize}
-              disabled={loading || !summarizeInput.trim()}
-              className="btn-primary green"
+              disabled={summarizing || textToSummarize.trim().split(/\s+/).length < 10}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.75rem 1.5rem',
+                background: summarizing ? '#94a3b8' : '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '1rem',
+                fontWeight: 500,
+                cursor: summarizing ? 'not-allowed' : 'pointer'
+              }}
             >
-              <Send size={20} />
-              <span>Générer le Résumé</span>
+              {summarizing ? <RefreshCw size={20} className="spinning" /> : <FileText size={20} />}
+              {summarizing ? 'Génération...' : 'Résumer'}
             </button>
-            <button
+            <button 
               onClick={clearSummary}
-              disabled={!summarizeInput && !summarizeOutput}
-              className="btn-secondary"
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: 'white',
+                color: '#64748b',
+                border: '2px solid #e2e8f0',
+                borderRadius: '8px',
+                fontSize: '1rem',
+                fontWeight: 500,
+                cursor: 'pointer'
+              }}
             >
-              <RefreshCw size={20} />
-              <span>Effacer</span>
+              Effacer
             </button>
           </div>
-        </div>
-      )}
 
-      {/* Features Info */}
-      <div className="features-info-grid">
-        <div className="feature-info-card green">
-          <div className="feature-info-header">
-            <Languages size={32} className="feature-info-icon" />
-            <h3 className="feature-info-title">Traduction Multilingue</h3>
-          </div>
-          <ul className="feature-info-list">
-            <li>✓ Support de plusieurs langues</li>
-            <li>✓ Traduction instantanée</li>
-            <li>✓ Contexte académique optimisé</li>
-            <li>✓ Interface intuitive</li>
-          </ul>
-        </div>
+          {/* Erreur */}
+          {summarizeError && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              padding: '1rem',
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '8px',
+              color: '#991b1b',
+              marginBottom: '1rem'
+            }}>
+              <AlertCircle size={20} />
+              <span>{summarizeError}</span>
+            </div>
+          )}
 
-        <div className="feature-info-card green">
-          <div className="feature-info-header">
-            <FileText size={32} className="feature-info-icon" />
-            <h3 className="feature-info-title">Résumé Intelligent</h3>
-          </div>
-          <ul className="feature-info-list">
-            <li>✓ Résumés concis et précis</li>
-            <li>✓ Conservation des points clés</li>
-            <li>✓ Traitement de longs documents</li>
-            <li>✓ Résultats en temps réel</li>
-          </ul>
-        </div>
+          {/* Résultat */}
+          {summary && (
+            <>
+              <div style={{
+                padding: '1.5rem',
+                background: '#f0fdf4',
+                border: '2px solid #bbf7d0',
+                borderRadius: '8px',
+                marginBottom: '1rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                  <CheckCircle size={20} style={{ color: '#166534' }} />
+                  <strong style={{ color: '#166534' }}>Résumé :</strong>
+                </div>
+                <p style={{ 
+                  margin: 0, 
+                  fontSize: '1.125rem', 
+                  lineHeight: '1.75',
+                  color: '#1e293b'
+                }}>
+                  {summary}
+                </p>
+              </div>
+
+              {/* Stats */}
+              {summaryStats && (
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                  gap: '1rem'
+                }}>
+                  <div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '8px' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.25rem' }}>
+                      TEXTE ORIGINAL
+                    </div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b' }}>
+                      {summaryStats.original}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>mots</div>
+                  </div>
+                  <div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '8px' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.25rem' }}>
+                      RÉSUMÉ
+                    </div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#10b981' }}>
+                      {summaryStats.summary}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>mots</div>
+                  </div>
+                  <div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '8px' }}>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.25rem' }}>
+                      COMPRESSION
+                    </div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#2563eb' }}>
+                      {Math.round(summaryStats.compression * 100)}%
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>du texte original</div>
+                  </div>
+                </div>
+              )}
+
+              {summaryStats?.warning && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '1rem',
+                  background: '#fffbeb',
+                  border: '1px solid #fde68a',
+                  borderRadius: '8px',
+                  color: '#92400e',
+                  marginTop: '1rem'
+                }}>
+                  <AlertCircle size={20} />
+                  <span>{summaryStats.warning}</span>
+                </div>
+              )}
+            </>
+          )}
+        </section>
       </div>
     </div>
   );

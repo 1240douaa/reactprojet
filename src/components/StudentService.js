@@ -87,7 +87,8 @@ const StudentService = () => {
     university_id: ''
   });
 
-  const API_URL = 'http://localhost:8090/gateway/students_service';
+  // ✅ MODIFICATION: URL Render au lieu du gateway local
+  const API_URL = 'https://student-1rpp.onrender.com/api/students';
 
   useEffect(() => {
     fetchStudents();
@@ -167,7 +168,7 @@ const StudentService = () => {
 
   const handleEditStudent = async () => {
     try {
-      const response = await fetch(`${API_URL}/${selectedStudent.id}/`, {
+      const response = await fetch(`${API_URL}/${selectedStudent.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -191,7 +192,7 @@ const StudentService = () => {
   const handleDeleteStudent = async (id) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cet étudiant ?')) {
       try {
-        const response = await fetch(`${API_URL}/${id}/`, {
+        const response = await fetch(`${API_URL}/${id}`, {
           method: 'DELETE'
         });
         if (response.ok) {

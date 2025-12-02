@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Menu, X, Home, Users, BookOpen, MessageSquare, Database } from 'lucide-react';
 import './App.css';
+// ⬇️ Vous n'avez PAS besoin d'importer getStudents, getCourses ici
+// Ces imports seront dans vos composants individuels
 import HomePage from './components/HomePage';
 import StudentService from './components/StudentService';
 import CourseService from './components/CourseService';
@@ -10,6 +12,7 @@ import GraphQLService from './components/GraphQLService';
 const App = () => {
   const [currentPage, setCurrentPage] = useState('home');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // ⬇️ Supprimé : cette ligne était en dehors du composant
 
   const navigation = [
     { id: 'home', name: 'Accueil', icon: Home },

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2, Save, X, BookOpen, Users } from 'lucide-react';
 import './CourseService.css';
+import apiService from '../services/apiService';
 
 const CourseService = () => {
-  // Données statiques
+  // Données statiques (fallback)
   const staticCourses = [
     {
       id: 1,
@@ -86,8 +87,6 @@ const CourseService = () => {
     schedule: ''
   });
 
-  const API_URL = 'http://localhost:8090/gateway/courses_service';
-
   useEffect(() => {
     fetchCourses();
   }, []);
@@ -101,20 +100,27 @@ const CourseService = () => {
     setFilteredCourses(filtered);
   }, [searchTerm, courses]);
 
+  // ========================================
+  // FETCH DATA VIA GATEWAY
+  // ========================================
   const fetchCourses = async () => {
     setLoading(true);
     try {
-      const response = await fetch(API_URL);
-      const data = await response.json();
+      console.log('🔄 Récupération des cours via Gateway...');
+      const data = await apiService.getCourses();
+      
       if (data && data.length > 0) {
+        console.log('✅ Cours récupérés depuis le Gateway:', data.length);
         setCourses(data);
         setFilteredCourses(data);
       } else {
+        console.log('⚠️ Aucune donnée reçue, utilisation des données statiques');
         setCourses(staticCourses);
         setFilteredCourses(staticCourses);
       }
     } catch (error) {
-      console.error('Erreur lors de la récupération des cours:', error);
+      console.error('❌ Erreur lors de la récupération des cours:', error);
+      console.log('📊 Utilisation des données statiques en fallback');
       setCourses(staticCourses);
       setFilteredCourses(staticCourses);
     }
@@ -126,20 +132,20 @@ const CourseService = () => {
     return courseEnrollments.map(e => students.find(s => s.id === e.studentId)).filter(Boolean);
   };
 
+  // ========================================
+  // CRUD OPERATIONS VIA GATEWAY
+  // ========================================
   const handleAddCourse = async () => {
     try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-      if (response.ok) {
-        fetchCourses();
-        setShowAddModal(false);
-        resetForm();
-      }
+      console.log('➕ Ajout d\'un cours via Gateway...');
+      await apiService.createCourse(formData);
+      console.log('✅ Cours ajouté avec succès');
+      fetchCourses();
+      setShowAddModal(false);
+      resetForm();
     } catch (error) {
-      console.error('Erreur lors de l\'ajout:', error);
+      console.error('❌ Erreur lors de l\'ajout:', error);
+      console.log('📊 Ajout local en fallback');
       const newCourse = {
         id: courses.length + 1,
         ...formData
@@ -152,18 +158,15 @@ const CourseService = () => {
 
   const handleEditCourse = async () => {
     try {
-      const response = await fetch(`${API_URL}/${selectedCourse.id}/`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-      if (response.ok) {
-        fetchCourses();
-        setShowEditModal(false);
-        resetForm();
-      }
+      console.log('✏️ Modification d\'un cours via Gateway...');
+      await apiService.updateCourse(selectedCourse.id, formData);
+      console.log('✅ Cours modifié avec succès');
+      fetchCourses();
+      setShowEditModal(false);
+      resetForm();
     } catch (error) {
-      console.error('Erreur lors de la modification:', error);
+      console.error('❌ Erreur lors de la modification:', error);
+      console.log('📊 Modification locale en fallback');
       const updatedCourses = courses.map(c => 
         c.id === selectedCourse.id ? { ...c, ...formData } : c
       );
@@ -176,14 +179,13 @@ const CourseService = () => {
   const handleDeleteCourse = async (id) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer ce cours ?')) {
       try {
-        const response = await fetch(`${API_URL}/${id}/`, {
-          method: 'DELETE'
-        });
-        if (response.ok) {
-          fetchCourses();
-        }
+        console.log('🗑️ Suppression d\'un cours via Gateway...');
+        await apiService.deleteCourse(id);
+        console.log('✅ Cours supprimé avec succès');
+        fetchCourses();
       } catch (error) {
-        console.error('Erreur lors de la suppression:', error);
+        console.error('❌ Erreur lors de la suppression:', error);
+        console.log('📊 Suppression locale en fallback');
         setCourses(courses.filter(c => c.id !== id));
       }
     }
