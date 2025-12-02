@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: campus-manager-frontend
+    env: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./build
+    envVars:
+      - key: NODE_VERSION
+        value: 18
